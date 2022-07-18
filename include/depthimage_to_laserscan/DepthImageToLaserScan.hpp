@@ -63,12 +63,13 @@ namespace depthimage_to_laserscan
      *                    radii for each angular increment.  The output scan will output the closest radius that is
      *                    still not smaller than range_min.  This can be used to vertically compress obstacles into
      *                    a single LaserScan.
+     * @param scan_start The number of rows (pixels) start to be used in the output. 
      * @param frame_id The output frame_id for the LaserScan.  This will probably NOT be the same frame_id as the
      *                 depth image.  Example: For OpenNI cameras, this should be set to 'camera_depth_frame' while
      *                 the camera uses 'camera_depth_optical_frame'.
      *
      */
-    explicit DepthImageToLaserScan(float scan_time, float range_min, float range_max, int scan_height, const std::string& frame_id);
+    explicit DepthImageToLaserScan(float scan_time, float range_min, float range_max, int scan_height, int scan_start, const std::string& frame_id);
     ~DepthImageToLaserScan();
 
     /**
@@ -141,7 +142,7 @@ namespace depthimage_to_laserscan
     */
     template<typename T>
     void convert(const sensor_msgs::msg::Image::ConstSharedPtr& depth_msg, const image_geometry::PinholeCameraModel& cam_model,
-                 const sensor_msgs::msg::LaserScan::UniquePtr& scan_msg, const int& scan_height) const{
+                 const sensor_msgs::msg::LaserScan::UniquePtr& scan_msg, const int& scan_height, const int& scan_start) const{
       // Use correct principal point from calibration
       float center_x = cam_model.cx();
 
@@ -153,8 +154,9 @@ namespace depthimage_to_laserscan
       int row_step = depth_msg->step / sizeof(T);
 
       int offset = static_cast<int>(cam_model.cy() - static_cast<double>(scan_height) / 2.0);
+      if (scan_start != -1) offset = scan_start;
       depth_row += offset*row_step; // Offset to center of image
-      for(int v = offset; v < offset+scan_height_; v++, depth_row += row_step){
+      for(int v = offset; v < offset+scan_height; v++, depth_row += row_step){
         for(uint32_t u = 0; u < depth_msg->width; u++){ // Loop over each pixel in row
           T depth = depth_row[u];
 
@@ -171,11 +173,11 @@ namespace depthimage_to_laserscan
             r = std::sqrt(std::pow(x, 2.0) + std::pow(z, 2.0));
           }
 
-	  // Determine if this point should be used.
-	  if(use_point(r, scan_msg->ranges[index], scan_msg->range_min, scan_msg->range_max)){
-	    scan_msg->ranges[index] = r;
-	  }
-	}
+    // Determine if this point should be used.
+    if(use_point(r, scan_msg->ranges[index], scan_msg->range_min, scan_msg->range_max)){
+      scan_msg->ranges[index] = r;
+    }
+  }
       }
     }
 
@@ -185,6 +187,7 @@ namespace depthimage_to_laserscan
     float range_min_; ///< Stores the current minimum range to use.
     float range_max_; ///< Stores the current maximum range to use.
     int scan_height_; ///< Number of pixel rows to use when producing a laserscan from an area.
+    int scan_start_; ///< Number of pixel rows start to be used when producing a laserscan from an area.
     std::string output_frame_id_; ///< Output frame_id for each laserscan.  This is likely NOT the camera's frame_id.
   };
 }  // namespace depthimage_to_laserscan

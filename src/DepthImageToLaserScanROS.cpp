@@ -59,17 +59,27 @@ DepthImageToLaserScanROS::DepthImageToLaserScanROS(const rclcpp::NodeOptions & o
 
   scan_pub_ = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", qos);
 
-  float scan_time = this->declare_parameter("scan_time", 0.033);
+  float scan_time, range_min, range_max;
+  int scan_height, scan_start;
+  std::string output_frame;
 
-  float range_min = this->declare_parameter("range_min", 0.45);
-  float range_max  = this->declare_parameter("range_max", 10.0);
+  this->declare_parameter("scan_time", 0.033);
+  this->declare_parameter("range_min", 0.45);
+  this->declare_parameter("range_max", 10.0);
+  this->declare_parameter("scan_height", 1);
+  this->declare_parameter("scan_start", -1);
+  this->declare_parameter("output_frame", "camera_depth_frame");
 
-  int scan_height = this->declare_parameter("scan_height", 1);
+  this->get_parameter("scan_time", scan_time);
+  this->get_parameter("range_min", range_min);
+  this->get_parameter("range_max", range_max);
+  this->get_parameter("scan_height", scan_height);
+  this->get_parameter("scan_start", scan_start);
+  this->get_parameter("output_frame", output_frame);
 
-  std::string output_frame = this->declare_parameter("output_frame", "camera_depth_frame");
 
   dtl_ = std::make_unique<depthimage_to_laserscan::DepthImageToLaserScan>(scan_time, range_min,
-                                                                          range_max, scan_height, output_frame);
+                                                                          range_max, scan_height, scan_start, output_frame);
 }
 
 DepthImageToLaserScanROS::~DepthImageToLaserScanROS(){

@@ -47,8 +47,8 @@
 
 namespace depthimage_to_laserscan {
 
-DepthImageToLaserScan::DepthImageToLaserScan(float scan_time, float range_min, float range_max, int scan_height, const std::string& frame_id)
-: scan_time_(scan_time), range_min_(range_min), range_max_(range_max), scan_height_(scan_height), output_frame_id_(frame_id){
+DepthImageToLaserScan::DepthImageToLaserScan(float scan_time, float range_min, float range_max, int scan_height, int scan_start, const std::string& frame_id)
+: scan_time_(scan_time), range_min_(range_min), range_max_(range_max), scan_height_(scan_height), scan_start_(scan_start), output_frame_id_(frame_id){
 }
 
 DepthImageToLaserScan::~DepthImageToLaserScan(){
@@ -126,21 +126,37 @@ sensor_msgs::msg::LaserScan::UniquePtr DepthImageToLaserScan::convert_msg(const 
   scan_msg->range_max = range_max_;
 
   // Check scan_height vs image_height
-  if(static_cast<double>(scan_height_)/2.0 > cam_model_.cy() || static_cast<double>(scan_height_)/2.0 > depth_msg->height - cam_model_.cy()){
+  if (scan_start_ < -1)
+  {
     std::stringstream ss;
-    ss << "scan_height ( " << scan_height_ << " pixels) is too large for the image height.";
+    ss << "scan_start ( from pixel No." << scan_start_ << " ) could not be negative.(only -1 means start from the middle of the image.)";
     throw std::runtime_error(ss.str());
+  }else if (scan_start_ == -1)
+  {
+    if(static_cast<double>(scan_height_)/2.0 > cam_model_.cy() || static_cast<double>(scan_height_)/2.0 > depth_msg->height - cam_model_.cy()){
+      std::stringstream ss;
+      ss << "scan_height ( " << scan_height_ << " pixels) is too large for the image height.";
+      throw std::runtime_error(ss.str());
+    }
+  }else{
+    if (scan_start_ + scan_height_ > depth_msg->height)
+    {
+      std::stringstream ss;
+      ss << "scan_start ( from pixel No." << scan_start_ << " and scan_height ( " << scan_height_ << " pixels) is too large for the image height.";
+      throw std::runtime_error(ss.str());
+    }
   }
+  
 
   // Calculate and fill the ranges
   uint32_t ranges_size = depth_msg->width;
   scan_msg->ranges.assign(ranges_size, std::numeric_limits<float>::quiet_NaN());
 
   if (depth_msg->encoding == sensor_msgs::image_encodings::TYPE_16UC1){
-    convert<uint16_t>(depth_msg, cam_model_, scan_msg, scan_height_);
+    convert<uint16_t>(depth_msg, cam_model_, scan_msg, scan_height_, scan_start_);
   }
   else if (depth_msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1){
-    convert<float>(depth_msg, cam_model_, scan_msg, scan_height_);
+    convert<float>(depth_msg, cam_model_, scan_msg, scan_height_, scan_start_);
   }
   else{
     std::stringstream ss;

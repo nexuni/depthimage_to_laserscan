@@ -56,7 +56,7 @@ sensor_msgs::msg::CameraInfo::SharedPtr info_msg_;
 TEST(ConvertTest, setupLibrary)
 {
   depthimage_to_laserscan::DepthImageToLaserScan dtl(g_scan_time, g_range_min,
-                                                     g_range_max, g_scan_height, g_output_frame);
+                                                     g_range_max, g_scan_height, -1, g_output_frame);
 
   depth_msg_.reset(new sensor_msgs::msg::Image);
   depth_msg_->header.stamp.sec = 0;
@@ -128,7 +128,7 @@ TEST(ConvertTest, setupLibrary)
 TEST(ConvertTest, testExceptions)
 {
   depthimage_to_laserscan::DepthImageToLaserScan dtl(g_scan_time, g_range_min,
-                                                     g_range_max, g_scan_height, g_output_frame);
+                                                     g_range_max, g_scan_height, -1, g_output_frame);
 
   // Test supported image encodings for exceptions
   // Does not segfault as long as scan_height = 1
@@ -145,7 +145,7 @@ TEST(ConvertTest, testScanHeight)
 {
   for(int scan_height = 1; scan_height <= 100; scan_height++){
     depthimage_to_laserscan::DepthImageToLaserScan dtl(g_scan_time, g_range_min,
-                                                       g_range_max, scan_height, g_output_frame);
+                                                       g_range_max, scan_height, -1, g_output_frame);
     uint16_t low_value = 500;
     uint16_t high_value = 3000;
 
@@ -158,11 +158,11 @@ TEST(ConvertTest, testScanHeight)
 
     for(int v = 0; v < scan_height; v++, data += row_step){
       for (int u = 0; u < data_len; u++){ // Loop over each pixel in row
-	if(v % scan_height == u % scan_height){
-	  data[u] = low_value;
-	} else {
-	  data[u] = high_value;
-	}
+  if(v % scan_height == u % scan_height){
+    data[u] = low_value;
+  } else {
+    data[u] = high_value;
+  }
       }
     }
 
@@ -174,8 +174,8 @@ TEST(ConvertTest, testScanHeight)
     for(size_t i = 0; i < scan_msg->ranges.size(); i++){
       // If this is a valid point
       if(scan_msg->range_min <= scan_msg->ranges[i] && scan_msg->ranges[i] <= scan_msg->range_max){
-	// Make sure it's not set to the high_value
-	ASSERT_LT(scan_msg->ranges[i], high_float_thresh);
+  // Make sure it's not set to the high_value
+  ASSERT_LT(scan_msg->ranges[i], high_float_thresh);
       }
     }
   }
@@ -194,7 +194,7 @@ TEST(ConvertTest, testRandom)
   }
 
   depthimage_to_laserscan::DepthImageToLaserScan dtl(g_scan_time, g_range_min,
-                                                     g_range_max, g_scan_height, g_output_frame);
+                                                     g_range_max, g_scan_height, -1, g_output_frame);
 
   // Convert
   sensor_msgs::msg::LaserScan::SharedPtr scan_msg = dtl.convert_msg(depth_msg_, info_msg_);
@@ -223,7 +223,7 @@ TEST(ConvertTest, testNaN)
   }
 
   depthimage_to_laserscan::DepthImageToLaserScan dtl(g_scan_time, g_range_min,
-                                                     g_range_max, g_scan_height, g_output_frame);
+                                                     g_range_max, g_scan_height, -1, g_output_frame);
 
   // Convert
   sensor_msgs::msg::LaserScan::SharedPtr scan_msg = dtl.convert_msg(float_msg, info_msg_);
@@ -251,7 +251,7 @@ TEST(ConvertTest, testPositiveInf)
   }
 
   depthimage_to_laserscan::DepthImageToLaserScan dtl(g_scan_time, g_range_min,
-                                                     g_range_max, g_scan_height, g_output_frame);
+                                                     g_range_max, g_scan_height, -1, g_output_frame);
 
   // Convert
   sensor_msgs::msg::LaserScan::SharedPtr scan_msg = dtl.convert_msg(float_msg, info_msg_);
@@ -286,7 +286,7 @@ TEST(ConvertTest, testNegativeInf)
   }
 
   depthimage_to_laserscan::DepthImageToLaserScan dtl(g_scan_time, g_range_min,
-                                                     g_range_max, g_scan_height, g_output_frame);
+                                                     g_range_max, g_scan_height, -1, g_output_frame);
 
   // Convert
   sensor_msgs::msg::LaserScan::SharedPtr scan_msg = dtl.convert_msg(float_msg, info_msg_);
